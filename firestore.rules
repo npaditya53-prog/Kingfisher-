@@ -1,0 +1,94 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Test connection document
+    match /test/{docId} {
+      allow read: if true;
+    }
+
+    // User profile entity validation
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'email', 'createdAt']) &&
+             data.keys().hasOnly(['id', 'email', 'displayName', 'photoURL', 'createdAt']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.email is string && data.email.size() <= 256 &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 128)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 512)) &&
+             data.createdAt is string && data.createdAt.size() <= 64;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().id == userId;
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().id == existing().id && incoming().createdAt == existing().createdAt;
+      allow delete: if false;
+
+      // Saved prompts subcollection
+      function isValidSavedPrompt(data, ownerId) {
+        return data.keys().hasAll(['id', 'userId', 'promptId', 'title', 'snippet', 'createdAt']) &&
+               data.keys().hasOnly(['id', 'userId', 'promptId', 'title', 'snippet', 'createdAt', 'notes']) &&
+               data.id is string && data.id.size() <= 128 &&
+               data.userId is string && data.userId == ownerId &&
+               data.promptId is string && data.promptId.size() <= 64 &&
+               data.title is string && data.title.size() <= 128 &&
+               data.snippet is string && data.snippet.size() <= 2048 &&
+               data.createdAt is string && data.createdAt.size() <= 64 &&
+               (!('notes' in data) || (data.notes is string && data.notes.size() <= 1024));
+      }
+
+      match /savedPrompts/{promptId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(promptId) && isValidSavedPrompt(incoming(), userId) && incoming().id == promptId;
+        allow update: if isOwner(userId) && isValidId(promptId) && isValidSavedPrompt(incoming(), userId) && incoming().id == existing().id && incoming().createdAt == existing().createdAt;
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    // Community prompts collection
+    function isValidCommunityPrompt(data) {
+      return data.keys().hasAll(['id', 'authorId', 'authorName', 'title', 'promptText', 'category', 'createdAt']) &&
+             data.keys().hasOnly(['id', 'authorId', 'authorName', 'title', 'promptText', 'category', 'createdAt']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.authorId is string && data.authorId == request.auth.uid &&
+             data.authorName is string && data.authorName.size() <= 128 &&
+             data.title is string && data.title.size() <= 128 &&
+             data.promptText is string && data.promptText.size() <= 2048 &&
+             data.category is string && data.category.size() <= 64 &&
+             data.createdAt is string && data.createdAt.size() <= 64;
+    }
+
+    match /communityPrompts/{promptId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && isValidId(promptId) && isValidCommunityPrompt(incoming()) && incoming().id == promptId;
+      allow update: if isSignedIn() && isValidId(promptId) && isValidCommunityPrompt(incoming()) && existing().authorId == request.auth.uid && incoming().authorId == existing().authorId && incoming().createdAt == existing().createdAt;
+      allow delete: if isSignedIn() && existing().authorId == request.auth.uid;
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Kingfisher — Cinematic Prompt Library",
+  "description": "Cinematic prompt library for websites that land with precision, featuring hero video choreography and field notes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

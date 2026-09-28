@@ -1,0 +1,61 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile document",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "photoURL": { "type": "string", "maxLength": 512 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "email", "createdAt"]
+    },
+    "SavedPrompt": {
+      "title": "SavedPrompt",
+      "description": "User bookmarked cinematic prompt",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "promptId": { "type": "string", "maxLength": 64 },
+        "title": { "type": "string", "maxLength": 128 },
+        "snippet": { "type": "string", "maxLength": 2048 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "notes": { "type": "string", "maxLength": 1024 }
+      },
+      "required": ["id", "userId", "promptId", "title", "snippet", "createdAt"]
+    },
+    "CommunityPrompt": {
+      "title": "CommunityPrompt",
+      "description": "Community cinematic prompt submission",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "authorId": { "type": "string", "maxLength": 128 },
+        "authorName": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 128 },
+        "promptText": { "type": "string", "maxLength": 2048 },
+        "category": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "authorId", "authorName", "title", "promptText", "category", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profile collection"
+    },
+    "/users/{userId}/savedPrompts/{promptId}": {
+      "schema": { "$ref": "#/entities/SavedPrompt" },
+      "description": "User bookmarked prompts subcollection"
+    },
+    "/communityPrompts/{promptId}": {
+      "schema": { "$ref": "#/entities/CommunityPrompt" },
+      "description": "Curated community prompt submissions"
+    }
+  }
+}
